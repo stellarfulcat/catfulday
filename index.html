@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cat — cowboy in space</title>
+
+<style>
+:root{
+  --cosmic-ink:#0b1838;
+  --twilight:#4d4177;
+  --deep-sky:#3a60a0;
+  --milky:#88a5e0;
+  --cloud:#c8ddf5;
+
+  --paper:rgba(200,221,245,.92);
+  --paper2:rgba(200,221,245,.78);
+
+  --ink:#0b1838;
+  --muted:rgba(11,24,56,.72);
+  --line:rgba(11,24,56,.18);
+  --shadow:0 24px 70px rgba(11,24,56,.45);
+
+  --tab:rgba(77,65,119,.75);
+  --tab2:rgba(136,165,224,.45);
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  color:var(--ink);
+  display:grid;
+  place-items:center;
+  padding:22px;
+  cursor: default;
+  min-height:100vh;
+}
+
+/* MP4 background */
+#bgVideo{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:-2;
+}
+#bgOverlay{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(rgba(11,24,56,.35), rgba(77,65,119,.18));
+  z-index:-1;
+}
+
+/* tiny spark trail canvas */
+#sparkleCanvas{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* card container */
+.wrap{
+  width:min(860px,100%);
+  filter:drop-shadow(var(--shadow));
+}
+.card{
+  position:relative;
+  border-radius:20px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  backdrop-filter:blur(10px);
+  overflow:hidden;
+}
+
+/* header */
+.header{
+  padding:22px 22px 10px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.pfp{
+  width:78px;height:78px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  position:relative;
+  overflow:visible;
+  z-index:10;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.85), transparent 55%),
+    url("./icon.jpg") center/cover no-repeat;
+}
+/* icon ring */
+.pfp .ring{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:200px;
+  height:auto;
+  transform:translate(-50%,-50%) rotate(-18deg);
+  pointer-events:none;
+  z-index:9999;
+  filter:drop-shadow(0 0 14px rgba(200,221,245,.45));
+}
+
+h1{margin:0;font-size:44px;line-height:1;color:var(--cosmic-ink);}
+.sub{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:14px;
+  font-family:ui-sans-serif,system-ui,sans-serif;
+}
+
+/* tabs */
+.tabs{
+  padding:8px 18px 16px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.tab{
+  border:1px solid var(--line);
+  background:var(--tab2);
+  color:var(--cosmic-ink);
+  padding:10px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  font-family:ui-sans-serif,system-ui,sans-serif;
+}
+.tab[aria-selected="true"]{
+  background:var(--tab);
+  color:#fff;
+}
+
+/* layout */
+.content{padding:0 22px 22px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+.grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+}
+@media(max-width:780px){
+  .grid{grid-template-columns:1fr;}
+}
+
+/* boxes */
+.box{
+  background:linear-gradient(180deg, rgba(200,221,245,.85), rgba(136,165,224,.55));
+  border:1px solid rgba(58,96,160,.35);
+  border-radius:16px;
+  padding:16px;
+}
+
+/* cat img */
+.art{
+  width:100%;
+  min-height:280px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(255,255,255,.22);
+}
+.art img{
+  width:100%;
+  max-height:360px;
+  object-fit:contain;
+  object-position:center;
+  padding:10px;
+}
+
+/* buttons */
+.btn{
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.35);
+  padding:10px 14px;
+  border-radius:12px;
+  text-decoration:none;
+  color:var(--ink);
+  font-family:ui-sans-serif,system-ui,sans-serif;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn:hover{background:rgba(255,255,255,.5);}
+
+/* about links row */
+.linkRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+/* letter heart burst trigger */
+.letterBtn{
+  font-size:18px;
+  padding:10px 16px;
+  border-radius:14px;
+}
+.letterHint{
+  display:inline-block;
+  margin-left:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* floating hearts */
+.heartPop{
+  position:fixed;
+  left:0; top:0;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  font-size:18px;
+  z-index:99999;
+  will-change:transform, opacity;
+  animation:heartFloat 900ms ease-out forwards;
+  filter:drop-shadow(0 2px 6px rgba(11,24,56,.25));
+}
+@keyframes heartFloat{
+  0%{opacity:0; transform:translate(-50%,-50%) translate(0, 10px) scale(.85);}
+  12%{opacity:1;}
+  100%{opacity:0; transform:translate(-50%,-50%) translate(var(--dx), var(--dy)) scale(1.25);}
+}
+
+/* inbox — fixed layout */
+.formCard{margin-top:10px;}
+.formGrid{
+  display:grid;
+  grid-template-columns: 1fr 160px;
+  gap:12px;
+  align-items:stretch;
+}
+@media(max-width:560px){
+  .formGrid{grid-template-columns:1fr;}
+}
+
+.field{
+  width:100%;
+  padding:12px 12px;
+  border-radius:14px;
+  border:1px solid rgba(58,96,160,.35);
+  background:rgba(255,255,255,.55);
+  color:var(--cosmic-ink);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size:14px;
+  outline:none;
+}
+.field:focus{
+  border-color: rgba(77,65,119,.65);
+  box-shadow: 0 0 0 3px rgba(136,165,224,.35);
+}
+
+.textarea{
+  min-height:120px;
+  resize:vertical;
+  grid-column: 1 / -1; /* full width */
+}
+
+.sendBtn{
+  height:44px;
+  align-self:end;
+  grid-column: 2;
+}
+@media(max-width:560px){
+  .sendBtn{grid-column:1;}
+}
+
+.hp{display:none;}
+.smallNote{
+  margin-top:10px;
+  color:var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size:12px;
+}
+</style>
+</head>
+
+<body>
+<video id="bgVideo" autoplay muted loop playsinline>
+  <source src="./bg.mp4" type="video/mp4">
+</video>
+<div id="bgOverlay"></div>
+
+<canvas id="sparkleCanvas"></canvas>
+
+<div class="wrap">
+  <div class="card">
+
+    <header class="header">
+      <div class="pfp">
+        <img class="ring" src="./ring.png" alt="">
+      </div>
+      <div>
+        <h1>Cat, what cat?</h1>
+        <p class="sub">Cat The Cowboy • she/her • ⋆˚𖥔 ݁ ˖𓂃.☘︎ ݁˖</p>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab" aria-selected="true" data-tab="home">Home</button>
+      <button class="tab" aria-selected="false" data-tab="about">About</button>
+      <button class="tab" aria-selected="false" data-tab="inbox">Inbox / Q&A</button>
+    </div>
+
+    <div class="content">
+
+      <!-- home -->
+      <section class="panel active" id="home">
+        <div class="grid">
+          <div class="box">
+            <p><strong>Great to see you here!</strong></p>
+
+            <p>
+              Hey, I hope you are having a great day! Just a reminder: Never let someone else's perception of you erase who you are and who you want to be.
+            </p>
+
+            <p>You are a star both metaphorically and scientifically.</p>
+
+            <p>───〃★</p>
+
+            <p>Give yourself time.</p>
+
+            <p>
+              Make a space for yourself to breathe and let the stars in you talk to other star versions of themselves, that is, you.
+            </p>
+
+            <!-- heart burst -->
+            <div style="margin-top:16px; text-align:center;">
+              <button class="btn letterBtn" id="openLetter" type="button" aria-label="Send hearts">✉️‎♡‧₊˚</button>
+            </div>
+          </div>
+
+          <aside class="box">
+            <div class="art">
+              <img src="./cat.png" alt="cat panel">
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- about -->
+      <section class="panel" id="about">
+        <div class="grid">
+          <div class="box">
+            <p>
+              <strong>About Me ദ്ദി（• ˕ •マ.ᐟ</strong><br>
+              <p>Hi again! I'm known as Cat online. I'm 20 year old student trying to improve my English alongside my writing.</p>
+              <p>I like reading a lot and collecting physical books. I crochet, play games, write fiction ━ though I just started to post them online. </p>
+              <p>Also I'm not really online, but if you want to talk I'm always here. My discord user is derhellstesternallen. ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ </p>
+            </p>
+
+            <div class="linkRow" style="margin-top:12px;">
+              <a class="btn" href="https://archiveofourown.org/users/cathasbigheart/profile" target="_blank" rel="noopener">AO3</a>
+              <a class="btn" href="https://x.com/cathasbigheart" target="_blank" rel="noopener">Twitter</a>
+              <a class="btn" href="https://open.spotify.com/user/31zskhjn5dgq5m3krcxmglsa3pxy?si=77630d72766b494a" target="_blank" rel="noopener">Spotify</a>
+            </div>
+          </div>
+
+          <aside class="box">
+            <div class="art">
+              <img src="./cat.png" alt="cat panel">
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- INBOX -->
+      <section class="panel" id="inbox">
+        <div class="box">
+          <p><strong>Inbox / Q&A</strong><br>
+          Send a message whether it's a fic idea you want to read or just a question!</p>
+
+          <form class="formCard" action="https://formspree.io/f/xbdalgnp" method="POST">
+            <div class="hp"><input name="website"></div>
+
+            <div class="formGrid">
+              <input class="field" name="name" placeholder="Name (optional)" autocomplete="name">
+              <button class="btn sendBtn" type="submit">Send</button>
+
+              <textarea class="field textarea" name="message" placeholder="Write your message..." required></textarea>
+            </div>
+
+            <div class="smallNote">I will receieve it via email.</div>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- tabs ----
+const tabs = document.querySelectorAll(".tab");
+const panels = document.querySelectorAll(".panel");
+tabs.forEach(b=>{
+  b.onclick=()=>{
+    tabs.forEach(t=>t.setAttribute("aria-selected","false"));
+    b.setAttribute("aria-selected","true");
+    panels.forEach(p=>p.classList.remove("active"));
+    document.getElementById(b.dataset.tab).classList.add("active");
+  }
+});
+
+// ---- sparks trial ----
+const c = document.getElementById("sparkleCanvas");
+const ctx = c.getContext("2d", { alpha:true });
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  c.width = Math.floor(innerWidth * dpr);
+  c.height = Math.floor(innerHeight * dpr);
+  c.style.width = innerWidth + "px";
+  c.style.height = innerHeight + "px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener("resize", resize);
+resize();
+
+let mx = innerWidth/2, my = innerHeight/2;
+let lastSpawn = 0;
+
+const sparks = [];
+const MAX = 4;
+
+addEventListener("mousemove",(e)=>{
+  mx = e.clientX; my = e.clientY;
+  const now = performance.now();
+  if(now - lastSpawn > 22){ // 
+    spawn(mx, my);
+    lastSpawn = now;
+  }
+});
+
+function spawn(x,y){
+  const s = { x, y, life:0, ttl:110 };
+  if(sparks.length >= MAX) sparks.shift();
+  sparks.push(s);
+}
+
+function tick(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+  ctx.globalCompositeOperation = "lighter";
+
+  for(const s of sparks){
+    s.life += 1;
+
+    const a = Math.max(0, 1 - s.life/s.ttl);
+    const r = 2.6 + (s.life/34);
+
+    // brighter slightly bluer for visibility
+    ctx.fillStyle = `rgba(200,221,245,${Math.min(1, a*1.25)})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  for(let i=sparks.length-1;i>=0;i--){
+    if(sparks[i].life >= sparks[i].ttl) sparks.splice(i,1);
+  }
+
+  ctx.globalCompositeOperation = "source-over";
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ---- heart burst from the letter ----
+const letterBtn = document.getElementById("openLetter");
+
+function popHeartsFrom(el, count=6){
+  const r = el.getBoundingClientRect();
+  const baseX = r.left + r.width*0.5;
+  const baseY = r.top  + r.height*0.2;
+
+  for(let i=0;i<count;i++){
+    const h = document.createElement("div");
+    h.className = "heartPop";
+    h.textContent = "♥";
+
+    const dx = (Math.random()*70 - 35);
+    const dy = -(70 + Math.random()*90);
+
+    h.style.setProperty("--dx", `${dx}px`);
+    h.style.setProperty("--dy", `${dy}px`);
+    h.style.animationDelay = `${i*55}ms`;
+
+    const colors = ["#ff5fa2","#ff3b6b","#c8ddf5","#88a5e0"];
+    h.style.color = colors[(Math.random()*colors.length)|0];
+
+    h.style.left = `${baseX}px`;
+    h.style.top  = `${baseY}px`;
+
+    document.body.appendChild(h);
+    h.addEventListener("animationend", ()=>h.remove(), {once:true});
+  }
+}
+
+letterBtn?.addEventListener("click", ()=> popHeartsFrom(letterBtn, 6));
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
